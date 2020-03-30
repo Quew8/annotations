@@ -9,7 +9,7 @@ use Minime\Annotations\AnnotationsBag;
  *
  * @package Annotations
  */
-interface AnnotationsBagInterface extends \ArrayAccess, \Countable, \IteratorAggregate, \JsonSerializable
+interface AnnotationsBagInterface extends \JsonSerializable
 {
 
     /**
@@ -36,15 +36,6 @@ interface AnnotationsBagInterface extends \ArrayAccess, \Countable, \IteratorAgg
     public function union(AnnotationsBagInterface $bag);
 
     /**
-     * Filters annotations based on a regexp
-     *
-     * @param  string                             $pattern Valid regexp
-     * @throws \InvalidArgumentException          If invalid regexp is passed
-     * @return \Minime\Annotations\AnnotationsBag Annotations collection with filtered results
-     */
-    public function grep($pattern);
-
-    /**
      * Retrieve annotation values as an array even if there's only one single value
      *
      * @param  string $key A valid annotation tag
@@ -59,15 +50,6 @@ interface AnnotationsBagInterface extends \ArrayAccess, \Countable, \IteratorAgg
      * @return boolean
      */
     public function has($key);
-
-    /**
-     * Set a single annotation value
-     *
-     * @param  string $key   a valid annotation tag
-     * @param  mixed  $value the param value
-     * @return self
-     */
-    public function set($key, $value);
 
     /**
      * Retrieves a single annotation value

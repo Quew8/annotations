@@ -47,11 +47,6 @@ class DynamicParser implements ParserInterface
     {
         $docblock = $this->getDocblockTagsSection($docblock);
         $annotations = $this->parseAnnotations($docblock);
-        foreach ($annotations as &$value) {
-            if (1 == count($value)) {
-                $value = $value[0];
-            }
-        }
 
         return $annotations;
     }
@@ -93,7 +88,10 @@ class DynamicParser implements ParserInterface
         $annotations = [];
         preg_match_all($this->dataPattern, $str, $found);
         foreach ($found[2] as $key => $value) {
-            $annotations[ $this->sanitizeKey($found[1][$key]) ][] = $this->parseValue($value, $found[1][$key]);
+            $annotations[] = [
+                $this->sanitizeKey($found[1][$key]),
+                $this->parseValue($value, $found[1][$key])
+            ];
         }
 
         return $annotations;

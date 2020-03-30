@@ -42,7 +42,23 @@ class AnnotationsBag implements AnnotationsBagInterface
      */
     public function toArray()
     {
-        return $this->attributes;
+        $annotations = [];
+        foreach($this->attributes as $i => $annotation) {
+            if(!array_key_exists($annotation[0], $annotations)) {
+                $annotations[$annotation[0]] = [];
+            }
+            $annotations[$annotation[0]][] = $annotation[1];
+        }
+        return $annotations;
+    }
+
+    private function indexOfKey($key) {
+        foreach($this->attributes as $i => $annotation) {
+            if($annotation[0] == $key) {
+                return $i;
+            }
+        }
+        return -1;
     }
 
     /**
@@ -53,37 +69,43 @@ class AnnotationsBag implements AnnotationsBagInterface
      */
     public function has($key)
     {
-        return array_key_exists($key, $this->attributes);
-    }
-
-    /**
-     * Set a single annotation value
-     *
-     * @param  string $key   a valid annotation tag, should match parser rules
-     * @param  mixed  $value the param value
-     * @return self
-     */
-    public function set($key, $value)
-    {
-        $this->attributes[$key] = $value;
-
-        return $this;
+        return $this->indexOfKey($key) >= 0;
     }
 
     /**
      * Retrieves a single annotation value
      *
-     * @param  string     $key    A valid annotation tag, should match parser rules
+     * @param  string     $key     A valid annotation tag, should match parser rules
+     * @param  mixed      $default Default value in case $key is not set
+     * @return mixed|null
+     */
+    public function get($key, $default = null)
+    {
+        $matches = $this->getAsArray($key);
+        if(count($matches) == 1) {
+            $matches[0];
+        } else if(count($matches) > 0) {
+            return $matches;
+        }
+
+        return $default;
+    }
+
+/**
+     * Retrieve a single annotation value even if there are many values
+     *
+     * @param  string     $key A valid annotation tag, should match parser rules
      * @param  mixed      $defaut Default value in case $key is not set
      * @return mixed|null
      */
-    public function get($key, $defaut = null)
+    public function getSingle($key, $default = null)
     {
-        if ($this->has($key)) {
-            return $this->attributes[$key];
+        $index = $this->indexOfKey($key);
+        if($index >= 0) {
+            $this->attributes[$index][1];
         }
 
-        return $defaut;
+        return $default;
     }
 
     /**
@@ -94,30 +116,14 @@ class AnnotationsBag implements AnnotationsBagInterface
      */
     public function getAsArray($key)
     {
-        if (! $this->has($key)) {
-            return [];
+        $matches = [];
+        foreach($this->attributes as $i => $annotation) {
+            if($annotation[0] == $key) {
+                $matches[] = $annotation[1];
+            }
         }
-        $res = $this->attributes[$key];
-        if (is_null($res)) {
-            return [null];
-        }
 
-        return (array) $res;
-    }
-
-    /**
-     * Filters annotations based on a regexp
-     *
-     * @param  string                             $pattern valid regexp
-     * @return \Minime\Annotations\AnnotationsBag Annotations collection with filtered results
-     */
-    public function grep($pattern)
-    {
-        $results = array_intersect_key($this->attributes, array_flip(
-            RegexGuard::getGuard()->grep($pattern, array_keys($this->attributes))
-        ));
-
-        return new static($results);
+        return $matches;
     }
 
     /**
@@ -132,11 +138,14 @@ class AnnotationsBag implements AnnotationsBagInterface
         $mask =  implode('', $delimiters);
         $consumer =  '(' . implode('|', array_map('preg_quote', $delimiters)) .')';
         $namespace_pattern = '/^' . preg_quote(rtrim($pattern, $mask)) .  $consumer . '/';
-        $iterator = new RegexIterator(
-            $this->getIterator(), $namespace_pattern, RegexIterator::REPLACE, RegexIterator::USE_KEY);
-        $iterator->replacement = '';
+        $results = [];
+        foreach($this->attributes as $i => $annotation) {
+            if(preg_match($namespace_pattern, $annotation[0])) {
+                $results[] = $annotation;
+            }
+        }
 
-        return new static(iterator_to_array($iterator));
+        return new static($results);
     }
 
     /**
@@ -147,7 +156,7 @@ class AnnotationsBag implements AnnotationsBagInterface
      */
     public function union(AnnotationsBagInterface $bag)
     {
-        return new static($this->attributes + $bag->toArray());
+        return new static(array_merge($this->attributes, $bag->attributes));
     }
 
     /**
@@ -164,47 +173,5 @@ class AnnotationsBag implements AnnotationsBagInterface
     public function jsonSerialize()
     {
         return $this->toArray();
-    }
-
-    /**
-     * IteratorAggregate
-     */
-    public function getIterator()
-    {
-        return new ArrayIterator($this->attributes);
-    }
-
-    /**
-     * ArrayAccess - Whether or not an offset exists.
-     */
-    public function offsetExists($key)
-    {
-        return $this->has($key);
-    }
-
-    /**
-     * ArrayAccess - Returns the value at specified offset.
-     */
-    public function offsetGet($key)
-    {
-        return $this->get($key);
-    }
-
-    /**
-     * ArrayAccess - Assigns a value to the specified offset.
-     */
-    public function offsetSet($key, $value)
-    {
-        $this->set($key, $value);
-
-        return true;
-    }
-
-    /**
-     * ArrayAccess - Unsets an offset.
-     */
-    public function offsetUnset($key)
-    {
-        unset($this->attributes[$key]);
     }
 }
